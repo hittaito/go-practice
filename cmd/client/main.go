@@ -58,6 +58,35 @@ func HelloStream() {
 		fmt.Println(res)
 	}
 }
+func HelloClientStream() {
+	stream, err := client.HelloClientStream(context.Background())
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	fmt.Println("enter your name")
+	for {
+		scanner.Scan()
+		name := scanner.Text()
+
+		if name == "" {
+			break
+		}
+		err = stream.Send(&mygrpc.HelloRequest{
+			Name: name,
+		})
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+	}
+	res, err := stream.CloseAndRecv()
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	fmt.Println(res.GetMessage())
+}
 func main() {
 	scanner = bufio.NewScanner(os.Stdin)
 
@@ -72,9 +101,11 @@ func main() {
 	client = mygrpc.NewGreetingServiceClient(conn)
 
 	for {
+		fmt.Println("")
 		fmt.Println("1: send requet")
-		fmt.Println("2: send stream request")
-		fmt.Println("3: exit")
+		fmt.Println("2: send server stream request")
+		fmt.Println("3: send client stream request")
+		fmt.Println("4: exit")
 		fmt.Print("please enter >")
 
 		scanner.Scan()
@@ -86,6 +117,8 @@ func main() {
 		case "2":
 			HelloStream()
 		case "3":
+			HelloClientStream()
+		case "4":
 			goto M
 		}
 	}
