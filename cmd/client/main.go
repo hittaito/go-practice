@@ -3,7 +3,9 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 
 	mygrpc "github.com/hittaito/go-practice/pkg/grpc"
@@ -31,6 +33,31 @@ func Hello() {
 	}
 	fmt.Println(res.GetMessage())
 }
+func HelloStream() {
+	fmt.Print("enter your name >")
+	scanner.Scan()
+
+	name := scanner.Text()
+
+	req := &mygrpc.HelloRequest{
+		Name: name,
+	}
+	stream, err := client.HelloServerStream(context.Background(), req)
+	if err != nil {
+		panic(err)
+	}
+	for {
+		res, err := stream.Recv()
+		if errors.Is(err, io.EOF) {
+			fmt.Println("all response have received")
+			break
+		}
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		fmt.Println(res)
+	}
+}
 func main() {
 	scanner = bufio.NewScanner(os.Stdin)
 
@@ -46,7 +73,8 @@ func main() {
 
 	for {
 		fmt.Println("1: send requet")
-		fmt.Println("2: exit")
+		fmt.Println("2: send stream request")
+		fmt.Println("3: exit")
 		fmt.Print("please enter >")
 
 		scanner.Scan()
@@ -56,6 +84,8 @@ func main() {
 		case "1":
 			Hello()
 		case "2":
+			HelloStream()
+		case "3":
 			goto M
 		}
 	}
