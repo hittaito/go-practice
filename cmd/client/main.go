@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 
 	mygrpc "github.com/hittaito/go-practice/pkg/grpc"
@@ -87,6 +88,52 @@ func HelloClientStream() {
 	}
 	fmt.Println(res.GetMessage())
 }
+func HelloBiStream() {
+	stream, err := client.HelloBiStream(context.Background())
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	fmt.Println("enter your name")
+
+	waitc := make(chan struct{})
+	go func() {
+		for {
+			in, err := stream.Recv()
+			if err == io.EOF {
+				fmt.Println("finish stream")
+				close(waitc)
+				return
+			}
+			if err != nil {
+				return
+			}
+			log.Printf("got message: %s", in.GetMessage())
+		}
+	}()
+
+	for {
+		scanner.Scan()
+		name := scanner.Text()
+
+		if name == "" {
+			break
+		}
+		err = stream.Send(&mygrpc.HelloRequest{
+			Name: name,
+		})
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+	}
+	err = stream.CloseSend()
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	<-waitc
+}
 func main() {
 	scanner = bufio.NewScanner(os.Stdin)
 
@@ -105,7 +152,8 @@ func main() {
 		fmt.Println("1: send requet")
 		fmt.Println("2: send server stream request")
 		fmt.Println("3: send client stream request")
-		fmt.Println("4: exit")
+		fmt.Println("4: send bi stream request")
+		fmt.Println("5: exit")
 		fmt.Print("please enter >")
 
 		scanner.Scan()
@@ -119,6 +167,8 @@ func main() {
 		case "3":
 			HelloClientStream()
 		case "4":
+			HelloBiStream()
+		case "5":
 			goto M
 		}
 	}

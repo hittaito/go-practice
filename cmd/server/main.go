@@ -56,6 +56,25 @@ func (s *myServer) HelloClientStream(stream mygrpc.GreetingService_HelloClientSt
 		nameList = append(nameList, req.GetName())
 	}
 }
+func (s *myServer) HelloBiStream(stream mygrpc.GreetingService_HelloBiStreamServer) error {
+	for {
+		req, err := stream.Recv()
+		if errors.Is(err, io.EOF) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+
+		message := fmt.Sprintf("Hello, %v", req.GetName())
+
+		if err := stream.Send(&mygrpc.HelloResponse{
+			Message: message,
+		}); err != nil {
+			return err
+		}
+	}
+}
 
 func NewMyServer() *myServer {
 	return &myServer{}
