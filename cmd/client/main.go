@@ -13,6 +13,7 @@ import (
 	_ "google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -30,10 +31,17 @@ func Hello() {
 	req := &mygrpc.HelloRequest{
 		Name: name,
 	}
-	res, err := client.Hello(context.Background(), req)
+	ctx := context.Background()
+	md := metadata.New(map[string]string{"type": "unary", "from": "client"})
+	ctx = metadata.NewOutgoingContext(ctx, md)
+
+	var header, trailer metadata.MD
+	res, err := client.Hello(ctx, req, grpc.Header(&header), grpc.Trailer(&trailer))
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println(header)
+	fmt.Println(trailer)
 	fmt.Println(res.GetMessage())
 }
 func HelloStream() {
@@ -91,7 +99,10 @@ func HelloClientStream() {
 	fmt.Println(res.GetMessage())
 }
 func HelloBiStream() {
-	stream, err := client.HelloBiStream(context.Background())
+	ctx := context.Background()
+	md := metadata.New(map[string]string{"type": "stream", "from": "clien"})
+	ctx = metadata.NewOutgoingContext(ctx, md)
+	stream, err := client.HelloBiStream(ctx)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -99,8 +110,15 @@ func HelloBiStream() {
 	fmt.Println("enter your name")
 
 	waitc := make(chan struct{})
+
 	go func() {
 		for {
+			headerMD, err := stream.Header()
+			if err != nil {
+				fmt.Println(err)
+			} else {
+				fmt.Println(headerMD)
+			}
 			in, err := stream.Recv()
 			if err == io.EOF {
 				fmt.Println("finish stream")
@@ -110,6 +128,7 @@ func HelloBiStream() {
 			if err != nil {
 				return
 			}
+
 			log.Printf("got message: %s", in.GetMessage())
 		}
 	}()
@@ -135,6 +154,9 @@ func HelloBiStream() {
 		return
 	}
 	<-waitc
+
+	trailerMD := stream.Trailer()
+	fmt.Println(trailerMD)
 }
 
 func FailHello() {
