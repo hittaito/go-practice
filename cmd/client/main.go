@@ -158,7 +158,13 @@ func main() {
 	scanner = bufio.NewScanner(os.Stdin)
 
 	address := "localhost:8080"
-	conn, err := grpc.Dial(address, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
+	conn, err := grpc.Dial(
+		address,
+		grpc.WithStreamInterceptor(myStreamClientInterceptor),
+		grpc.WithUnaryInterceptor(myUnaryClientInterceptor),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithBlock(),
+	)
 
 	if err != nil {
 		panic(err)
