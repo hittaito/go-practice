@@ -10,8 +10,10 @@ import (
 	"os"
 
 	mygrpc "github.com/hittaito/go-practice/pkg/grpc"
+	_ "google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 )
 
 var (
@@ -134,6 +136,24 @@ func HelloBiStream() {
 	}
 	<-waitc
 }
+
+func FailHello() {
+
+	req := &mygrpc.HelloRequest{
+		Name: "hoge",
+	}
+	res, err := client.FailHello(context.Background(), req)
+	if err != nil {
+		fmt.Println(err)
+		if stat, ok := status.FromError(err); ok {
+			fmt.Printf("code: %s\n", stat.Code())
+			fmt.Printf("message: %s\n", stat.Message())
+			fmt.Printf("detail: %s\n", stat.Details()...)
+		}
+	} else {
+		fmt.Println(res.GetMessage())
+	}
+}
 func main() {
 	scanner = bufio.NewScanner(os.Stdin)
 
@@ -153,7 +173,8 @@ func main() {
 		fmt.Println("2: send server stream request")
 		fmt.Println("3: send client stream request")
 		fmt.Println("4: send bi stream request")
-		fmt.Println("5: exit")
+		fmt.Println("5: server side error request")
+		fmt.Println("6: exit")
 		fmt.Print("please enter >")
 
 		scanner.Scan()
@@ -169,6 +190,8 @@ func main() {
 		case "4":
 			HelloBiStream()
 		case "5":
+			FailHello()
+		case "6":
 			goto M
 		}
 	}

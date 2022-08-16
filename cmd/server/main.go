@@ -12,8 +12,11 @@ import (
 	"time"
 
 	mygrpc "github.com/hittaito/go-practice/pkg/grpc"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/status"
 )
 
 type myServer struct {
@@ -75,6 +78,14 @@ func (s *myServer) HelloBiStream(stream mygrpc.GreetingService_HelloBiStreamServ
 		}
 	}
 }
+func (s *myServer) FailHello(ctx context.Context, req *mygrpc.HelloRequest) (*mygrpc.HelloResponse, error) {
+	stat := status.New(codes.Unknown, "unknown error occurred")
+	stat, _ = stat.WithDetails(&errdetails.DebugInfo{
+		Detail: "detail reason here",
+	})
+	err := stat.Err()
+	return nil, err
+}
 
 func NewMyServer() *myServer {
 	return &myServer{}
@@ -87,7 +98,10 @@ func main() {
 		panic(err)
 	}
 
-	server := grpc.NewServer()
+	server := grpc.NewServer(
+		grpc.UnaryInterceptor(myUnaryServerInterceptor1),
+		grpc.StreamInterceptor(myStreamServerInterceptor),
+	)
 
 	mygrpc.RegisterGreetingServiceServer(server, NewMyServer())
 
